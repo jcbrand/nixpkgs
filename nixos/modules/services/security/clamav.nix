@@ -31,7 +31,7 @@ let
     LogClean false
     LogVerbose false
     PidFile ${runDir}/clamd.pid
-    DatabaseDirectory ${stateDir}/clamav
+    DatabaseDirectory ${stateDir}
     SelfCheck 3600
     Foreground false
     Debug false
@@ -91,16 +91,20 @@ let
     OfficialDatabaseOnly false
     CrossFilesystems true
 
-    ${cfg.daemon.extaConfig}
+    ${cfg.daemon.extraConfig}
   '';
 in
 {
-  ###### interface
-
   options = {
-
     services.clamav = {
       daemon = {
+        enable = mkOption {
+          default = false;
+          type = types.bool;
+          description = "
+            Enable the clamd daemon.
+          ";
+        };
         extraConfig = mkOption {
           default = "";
           description = ''
@@ -108,7 +112,7 @@ in
             configuration file.
           '';
         };
-      },
+      };
       updater = {
         enable = mkOption {
         default = false;
@@ -137,7 +141,7 @@ in
 
   ###### implementation
 
-  config = mkIf cfg.updater.enable {
+  config = mkIf cfg.updater.enable or cfg.daemon.enable {
     environment.systemPackages = [ pkgs.clamav ];
     users.extraUsers = singleton
       { name = clamavUser;
@@ -151,7 +155,7 @@ in
         gid = config.ids.gids.clamav;
       };
 
-    services.clamav.updater.config = ''
+    services.clamav.updater.config = mkIf cfg.updater.enable ''
       DatabaseDirectory ${stateDir}
       Foreground yes
       Checks ${toString cfg.updater.frequency}
@@ -159,7 +163,7 @@ in
     '';
 
     jobs = {
-      clamav_daemon = {
+      clamav_daemon = mkIf cfg.daemon.enable {
 	      name = "clamav-daemon";
         startOn = "startup";
 
@@ -169,9 +173,9 @@ in
           chown ${clamavUser}:${clamavGroup} ${logDir}
           chown ${clamavUser}:${clamavGroup} ${runDir}
           '';
-        exec = "${pkgs.clamav}/bin/clamd";
+        exec = "${pkgs.clamav}/bin/clamd -c ${clamdConfigFile}";
       }; 
-      clamav_updater = {
+      clamav_updater = mkIf cfg.updater.enable {
 	      name = "clamav-updater";
         startOn = "started network-interfaces";
         stopOn = "stopping network-interfaces";
