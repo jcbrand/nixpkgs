@@ -88,7 +88,8 @@ in
     systemd.services.clamd = mkIf cfg.daemon.enable {
       description = "ClamAV daemon (clamd)";
       path = [ pkgs.clamav ];
-      after = [ "network.target" ];
+      after = [ "network.target" "freshclam.service" ];
+      requires = [ "freshclam.service" ];
       wantedBy = [ "multi-user.target" ];
       preStart = ''
         mkdir -m 0755 -p ${logDir}
@@ -97,7 +98,8 @@ in
         chown ${clamavUser}:${clamavGroup} ${runDir}
         '';
       serviceConfig = {
-        ExecStart = "${pkgs.clamav}/bin/clamd -c ${clamdConfigFile}";
+        ExecStart = "${pkgs.clamav}/bin/clamd --config-file=${clamdConfigFile}";
+        Type = "forking";
         ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
         Restart = "on-failure";
         RestartSec = "10s";
