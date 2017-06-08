@@ -49,7 +49,7 @@ with lib;
       postStop = ''
         rm -rf ${cfg.stateDir}
       '';
-      serviceConfig.ExecStart = "${pkgs.varnish}/sbin/varnishd -a ${cfg.http_address} -f ${pkgs.writeText "default.vcl" cfg.config} -n ${cfg.stateDir} -u varnish";
+      serviceConfig.ExecStart = "${pkgs.varnish}/sbin/varnishd -a ${cfg.http_address} -f ${pkgs.writeText "default.vcl" cfg.config} -n ${cfg.stateDir}";
       serviceConfig.Type = "forking";
     };
 
